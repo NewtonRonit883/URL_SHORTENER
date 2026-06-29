@@ -1,44 +1,70 @@
 # C++ URL Shortener
 
-A lightweight, high-performance URL shortener built with C++ and the [Crow](https://crowcpp.org/) web framework. This project features a clean, dark-themed web interface for users to shorten long URLs and automatically redirects visitors to the original destination using HTTP 301 status codes.
+A high-performance, lightweight URL shortener service built with C++17, utilizing the [Crow](https://crowcpp.org/) web framework and [Asio](https://think-async.com/Asio/) for networking. This project features a responsive, dark-themed HTML frontend embedded directly into the binary, providing a seamless user experience.
 
 ## Features
 
-*   **Modern Web UI:** Includes a responsive HTML/CSS/JS frontend embedded directly in the binary.
-*   **Persistent Storage:** Automatically saves and loads your URL mappings from `url_mapping.dat` so you don't lose links after restarting.
-*   **HTTP Redirection:** Uses standard HTTP 301 (Moved Permanently) headers for fast, efficient link forwarding.
-*   **Collision Handling:** Automatically handles potential ID clashes by appending a salt to the hash.
+*   **Embedded Frontend:** A custom HTML/CSS/JS interface is served directly by the C++ backend.
+*   **Persistent Storage:** Mappings are saved to `url_mapping.dat` using a file-based storage system, ensuring data persists across server restarts.
+*   **HTTP Redirection:** Efficiently handles requests using HTTP 301 (Moved Permanently) status codes.
+*   **Collision Handling:** Implements a salt-based generation algorithm to prevent ID clashes.
+*   **Performance:** Built on modern C++17 standards, utilizing features like `std::string_view` and efficient memory handling.
+
+## System Requirements
+
+*   **Compiler:** A C++17 compliant compiler (GCC 7+, Clang 5+, or MSVC 2017+).
+*   **OS:** Windows (tested with MinGW-w64) or Linux/macOS.
+*   **Network Libraries:** Windows requires `ws2_32` and `mswsock`.
 
 ## Prerequisites
 
-To compile this project, you will need:
-1.  **G++ Compiler** (MinGW-w64 recommended for Windows).
-2.  **Crow Framework:** Download `crow_all.h` from [Crow GitHub](https://github.com/CrowCpp/Crow/releases).
-3.  **Asio:** Download the standalone `asio` library from [Asio sourceforge](https://sourceforge.net/projects/asio/files/asio/).
+1.  **Crow Framework:** Download `crow_all.h` from the [Crow GitHub releases](https://github.com/CrowCpp/Crow/releases).
+2.  **Asio:** Download the standalone [Asio library](https://sourceforge.net/projects/asio/files/asio/).
 
-## Setup Instructions
+## Setup & Compilation
 
-1.  **Clone/Copy the project:** Ensure `url_shortner.cpp` is in your project folder.
-2.  **Organize Dependencies:**
-    *   Place `crow_all.h` in your project root.
-    *   Place the `include` folder from Asio in your project root.
-3.  **Compile:**
-    Open your terminal in the project folder and run:
-    ```bash
-    g++ url_shortner.cpp -o shortener.exe -I include -lws2_32 -lmswsock
-    ```
-4.  **Run:**
-    ```bash
-    ./shortener.exe
-    ```
-5.  **Access:**
-    Open your browser and navigate to `http://localhost:8080`.
+### 1. Project Structure
+Ensure your project folder is organized as follows:
+```text
+/your-project-folder
+├── url_shortner.cpp
+├── crow_all.h
+└── include/        <-- Asio header files (asio.hpp, asio/, etc.)
+```
+
+### 2. Compilation
+Open your terminal in the project directory and run the following command. Note the `-std=c++17` flag, which is required for the modern features used in this project:
+
+**Windows (MinGW):**
+```bash
+g++ -std=c++17 url_shortner.cpp -o shortener.exe -I include -lws2_32 -lmswsock
+```
+
+**Linux/macOS:**
+```bash
+g++ -std=c++17 url_shortner.cpp -o shortener -I include -lpthread
+```
+
+### 3. Execution
+Run the compiled binary:
+```bash
+./shortener.exe
+```
+The server will start and listen on `http://localhost:8080`.
 
 ## How It Works
 
-*   **Shortening:** The server receives a URL, generates a 6-character hash using `time(0)`, and saves it to a local file.
-*   **Redirecting:** When a user visits `/r/<short_id>`, the server looks up the ID in the `unordered_map` and issues a 301 redirect.
-*   **Storage:** The program uses a simple file-based database (`url_mapping.dat`). It reads this file on startup and appends new entries in real-time.
+*   **Endpoint `/`:** Serves the interactive frontend.
+*   **Endpoint `/shorten/<path>`:** Accepts a URL, generates a unique 6-character hash, stores the mapping in `url_mapping.dat`, and returns the shortened link.
+*   **Endpoint `/r/<id>`:** The redirect route. It performs a lookup in the `unordered_map`, verifies the existence of the ID, and issues a 301 redirect to the original destination.
+*   **Storage Logic:** The `URLShortener` class manages the `unordered_map` in-memory for lightning-fast lookups, while synchronizing to `url_mapping.dat` to ensure durability.
 
-## License
-This project is open-source and available for educational use.
+## Troubleshooting
+
+*   **"404 Not Found" / Invalid Redirect:** Ensure you have deleted any old `url_mapping.dat` files before running the new code to prevent loading "poisoned" data with hidden carriage return characters (`\r`).
+*   **"No such file or directory":** Verify that `crow_all.h` and the Asio `include` folder are in the same directory as `url_shortner.cpp`.
+*   **Network Errors:** Ensure port `8080` is not being used by another application (e.g., another server or a hung instance of `shortener.exe`).
+
+## Author
+* Ronit Butolia
+* IITK
