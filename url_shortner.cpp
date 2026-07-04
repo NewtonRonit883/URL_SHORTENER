@@ -7,6 +7,7 @@
 #include <ctime>
 #include <algorithm>
 #include "crow_all.h"
+
 using namespace std;
 
 class URLShortener {
@@ -70,7 +71,7 @@ public:
     }
 };
 
-// Build the HTML page as a function to avoid raw string issues
+// Build the HTML page as a function
 string buildHtmlPage() {
     string html = "";
     html += "<!DOCTYPE html>\n";
@@ -135,14 +136,6 @@ string buildHtmlPage() {
     html += ".copy-btn:hover { background: #333; }\n";
     html += ".error { color: #ff6b6b; font-size: 0.88rem; margin-top: 10px; display: none; }\n";
     html += ".error.visible { display: block; }\n";
-    html += ".spinner {\n";
-    html += "  display: inline-block; width: 14px; height: 14px;\n";
-    html += "  border: 2px solid rgba(255,255,255,0.2);\n";
-    html += "  border-top-color: #fff; border-radius: 50%;\n";
-    html += "  animation: spin 0.6s linear infinite;\n";
-    html += "  vertical-align: middle; margin-right: 6px;\n";
-    html += "}\n";
-    html += "@keyframes spin { to { transform: rotate(360deg); } }\n";
     html += "</style>\n";
     html += "</head>\n";
     html += "<body>\n";
@@ -163,7 +156,6 @@ string buildHtmlPage() {
     html += "  </div>\n";
     html += "</div>\n";
     html += "<script>\n";
-    // JS uses doShorten() instead of shorten() to avoid any name conflicts
     html += "async function doShorten() {\n";
     html += "  var input = document.getElementById('urlInput');\n";
     html += "  var btn = document.getElementById('shortenBtn');\n";
@@ -186,7 +178,6 @@ string buildHtmlPage() {
     html += "  try {\n";
     html += "    var res = await fetch('/shorten/' + url);\n";
     html += "    var text = await res.text();\n";
-    // Extract URL by splitting on space — avoids regex entirely
     html += "    var parts = text.split(' ');\n";
     html += "    var shortUrl = parts[parts.length - 1].trim();\n";
     html += "    if (shortUrl.indexOf('http') === 0) {\n";
@@ -241,7 +232,7 @@ int main() {
     ([&shortener](const crow::request& req, crow::response& res, string urlPath){
         string longUrl = urlPath;
 
-        // Restore https:// collapsed by browser to https:/
+        // Restore https:// collapsed by browser
         if (longUrl.size() >= 8 && longUrl.substr(0, 8) == "https://") {
             // already fine
         } else if (longUrl.size() >= 7 && longUrl.substr(0, 7) == "https:/") {
@@ -251,7 +242,16 @@ int main() {
         }
 
         string shortId = shortener.shortenUrl(longUrl);
-        string shortUrl = "http://localhost:8080/r/" + shortId;
+        
+        // --- DYNAMIC HOST IDENTIFICATION ---
+        // This ensures the link generated uses the actual IP address
+        // the user typed in (e.g., 192.168.1.15:8080 or localhost:8080)
+        string host = req.get_header_value("Host");
+        if (host.empty()) {
+            host = "localhost:8080"; 
+        }
+        
+        string shortUrl = "http://" + host + "/r/" + shortId;
 
         res.set_header("Content-Type", "text/plain");
         res.set_header("Access-Control-Allow-Origin", "*");
@@ -287,6 +287,8 @@ int main() {
         res.end();
     });
 
-    cout << "Server running at http://localhost:8080" << endl;
+    cout << "Server running. Access it on your browser." << endl;
+    
+    // Listen on 0.0.0.0 to accept cross-device local network connections
     app.bindaddr("0.0.0.0").port(8080).multithreaded().run();
 }
